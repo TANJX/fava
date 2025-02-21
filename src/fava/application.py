@@ -38,6 +38,7 @@ from flask import render_template_string
 from flask import request
 from flask import send_file
 from flask import url_for as flask_url_for
+from flask_cors import CORS
 from flask_babel import Babel  # type: ignore[import-untyped]
 from flask_babel import get_translations
 from markupsafe import Markup
@@ -493,6 +494,7 @@ def create_app(
         poll_watcher: Whether to use old poll watcher
     """
     fava_app = Flask("fava")
+    CORS(fava_app, supports_credentials=True)
     fava_app.register_blueprint(json_api, url_prefix="/<bfile>/api")
     fava_app.json = FavaJSONProvider(fava_app)
     fava_app.app_ctx_globals_class = Context  # type: ignore[assignment]
