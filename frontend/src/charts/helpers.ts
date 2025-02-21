@@ -72,7 +72,8 @@ export function hclColorRange(
   chroma = 45,
   luminance = 70,
 ): string[] {
-  const offset = 270;
+  const offset = 5;
+  // const offset = 270;
   const delta = 360 / count;
   const colors = [...Array(count).keys()].map((index) => {
     const hue = (index * delta + offset) % 360;
@@ -102,9 +103,10 @@ export const sunburstScale = derived(accounts, ($accounts) =>
 
 export const currenciesScale = derived(
   [operating_currency, currencies_sorted],
-  ([$operating_currency, $currencies_sorted]) =>
-    scaleOrdinal(colors10).domain([
+  ([$operating_currency, $currencies_sorted]) => {
+    return scaleOrdinal(colors10).domain([
       ...$operating_currency,
       ...$currencies_sorted,
-    ]),
+    ]);
+  },
 );

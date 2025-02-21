@@ -1,6 +1,7 @@
 :root {
   /* Fonts */
-  --font-family: "Fira Sans", sans-serif;
+  /* --font-family: "Fira Sans", sans-serif; */
+  --font-family: "Source Sans Pro", sans-serif;
   --font-family-monospaced: "Fira Mono", monospace;
   --font-family-editor: "Source Code Pro", monospace;
 
@@ -24,7 +25,8 @@
   --text-color: hsl(0deg 0% 27%);
   --text-color-lighter: hsl(0deg 0% 33%);
   --text-color-lightest: hsl(0deg 0% 47%);
-  --link-color: hsl(203deg 100% 32%);
+  /* --link-color: hsl(203deg 100% 32%); */
+  --link-color: #AB0036;
   --link-hover-color: hsl(0deg 0% 33%);
   --heading-color: #333;
   --code-background: hsl(0deg 0% 97%);
@@ -39,7 +41,8 @@
 
   /* Buttons */
   --button-color: #fff;
-  --button-background: hsl(203deg 100% 32%);
+  /* --button-background: hsl(203deg 100% 32%); */
+  --button-background: #AB0036;
   --button-muted-color: var(--text-color);
   --button-muted-background: var(--background-darker);
 
@@ -55,9 +58,12 @@
 
   /* Header */
   --header-color: #fff;
-  --header-background: hsl(203deg 100% 32%);
+  /* --header-background: hsl(203deg 100% 32%);
   --header-placeholder-color: hsl(203deg 47% 66%);
-  --header-placeholder-background: hsl(203deg 56% 45%);
+  --header-placeholder-background: hsl(203deg 56% 45%); */
+  --header-background: #AB0036;
+  --header-placeholder-color: #ED96B2;
+  --header-placeholder-background: #C13F68;
 
   /* Tables */
   --table-header-text: hsl(0deg 0% 40%);
