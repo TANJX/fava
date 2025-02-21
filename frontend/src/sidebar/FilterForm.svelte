@@ -4,6 +4,7 @@
   import { escape } from "../journal";
   import { accounts, links, payees, tags, years } from "../stores";
   import { account_filter, fql_filter, time_filter } from "../stores/filters";
+  import { timeFormat } from "d3-time-format";
 
   let fql_filter_suggestions = $derived([
     ...$tags.map((tag) => `#${tag}`),
@@ -56,6 +57,40 @@
     fql_filter.set(fql_filter_value);
     time_filter.set(time_filter_value);
   }
+
+  const next_period = () => {
+    const params = new URLSearchParams(window.location.search);
+    const timeParam = params.get('time');
+    
+    if (!timeParam) return;
+
+    if (timeParam.match(/^\d{4}-\d{2}$/)) {
+      const currentDate = new Date(timeParam + '-01');
+      const nextDate = new Date(currentDate.getTime() + (32 * 24 * 60 * 60 * 1000));
+      const nextTime = timeFormat("%Y-%m")(nextDate);
+      time_filter.set(nextTime);
+    } else if (timeParam.match(/^\d{4}$/)) {
+      const nextTime = (parseInt(timeParam) + 1).toString();
+      time_filter.set(nextTime);
+    }
+  }
+
+  const previous_period = () => {
+    const params = new URLSearchParams(window.location.search);
+    const timeParam = params.get('time');
+    
+    if (!timeParam) return;
+    
+    if (timeParam.match(/^\d{4}-\d{2}$/)) {
+      const currentDate = new Date(timeParam + '-01');
+      const nextDate = new Date(currentDate.getTime() - (5 * 24 * 60 * 60 * 1000));
+      const nextTime = timeFormat("%Y-%m")(nextDate);
+      time_filter.set(nextTime);
+    } else if (timeParam.match(/^\d{4}$/)) {
+      const nextTime = (parseInt(timeParam) - 1).toString();
+      time_filter.set(nextTime);
+    }
+  }
 </script>
 
 <form
@@ -64,6 +99,8 @@
     submit();
   }}
 >
+  <button type="button" onclick={previous_period} class="nav-button">←</button>
+  <button type="button" onclick={next_period} class="nav-button">→</button>
   <AutocompleteInput
     bind:value={time_filter_value}
     placeholder={_("Time")}
@@ -127,6 +164,19 @@
   }
 
   form :global([type="text"]:focus) {
+    background-color: var(--background);
+  }
+
+  form :global(.nav-button) {
+    padding: 0.5em;
+    background-color: var(--placeholder-background);
+    border: 0;
+    color: var(--header-placeholder-color);
+    cursor: pointer;
+    font-weight: bold;
+  }
+
+  form :global(.nav-button):hover {
     background-color: var(--background);
   }
 
