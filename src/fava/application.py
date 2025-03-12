@@ -515,3 +515,12 @@ def create_app(
 
 #: This is still provided for compatibility but will be removed at some point.
 app = create_app([])
+
+@app.after_request
+def after_request(response):
+    response.headers.add("Access-Control-Allow-Origin", request.headers.get("Origin", "*"))
+    response.headers.add("Access-Control-Allow-Credentials", "true")
+    response.headers.add("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE")
+    response.headers.add("Access-Control-Allow-Headers", "content-type, x-extension-key")
+    response.headers.add("Access-Control-Expose-Headers", "Access-Control-Allow-Origin, Access-Control-Allow-Methods, x-extension-key")
+    return response
