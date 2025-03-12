@@ -72,6 +72,14 @@
     } else if (timeParam.match(/^\d{4}$/)) {
       const nextTime = (parseInt(timeParam) + 1).toString();
       time_filter.set(nextTime);
+    } else if (timeParam.match(/^\d{4}-Q[1-4]$/)) {
+      // 2024-Q1 -> 2024-Q2, 2024-Q4 -> 2025-Q1
+      const currentQuarter = parseInt(timeParam.slice(-1));
+      const nextQuarter = currentQuarter + 1 > 4 ? 1 : currentQuarter + 1;
+      const currentYear = parseInt(timeParam.slice(0, 4));
+      const nextYear = currentYear + (nextQuarter === 1 ? 1 : 0);
+      const nextTime = `${nextYear}-Q${nextQuarter}`;
+      time_filter.set(nextTime);
     }
   }
 
@@ -89,6 +97,14 @@
     } else if (timeParam.match(/^\d{4}$/)) {
       const nextTime = (parseInt(timeParam) - 1).toString();
       time_filter.set(nextTime);
+    } else if (timeParam.match(/^\d{4}-Q[1-4]$/)) {
+      // 2024-Q1 -> 2023-Q4, 2024-Q4 -> 2024-Q3
+      const currentQuarter = parseInt(timeParam.slice(-1));
+      const previousQuarter = currentQuarter === 1 ? 4 : currentQuarter - 1;
+      const currentYear = parseInt(timeParam.slice(0, 4));
+      const previousYear = currentYear - (previousQuarter === 4 ? 1 : 0);
+      const previousTime = `${previousYear}-Q${previousQuarter}`;
+      time_filter.set(previousTime);
     }
   }
 </script>
