@@ -1,26 +1,35 @@
 <script lang="ts">
   import type { Entry as EntryType } from "../../entries";
-  import { isDuplicate } from "../../entries";
   import Entry from "../../entry-forms/Entry.svelte";
   import { _ } from "../../i18n";
   import ModalBase from "../../modals/ModalBase.svelte";
 
-  export let entries: EntryType[];
-  export let save: () => void;
-  export let close: () => void;
-
-  let currentIndex = 0;
-
-  $: shown = entries.length > 0;
-  $: entry = entries[currentIndex];
-  $: duplicate = entry && isDuplicate(entry);
-  $: duplicates = entries.filter(isDuplicate).length;
-  $: if (entries.length > 0 && currentIndex >= entries.length) {
-    currentIndex = 0;
+  interface Props {
+    entries: EntryType[];
+    save: () => void;
+    close: () => void;
   }
 
-  function submitOrNext() {
-    if (currentIndex < entries.length - 1) {
+  let { entries = $bindable(), save, close }: Props = $props();
+
+  let currentIndex = $state.raw(0);
+  let count = $derived(entries.length);
+  let shown = $derived(count > 0);
+
+  let entry = $derived(entries[currentIndex]);
+  let duplicate = $derived(entry?.is_duplicate());
+  let count_duplicates = $derived(
+    entries.filter((e) => e.is_duplicate()).length,
+  );
+  $effect(() => {
+    if (count > 0 && currentIndex >= count) {
+      currentIndex = 0;
+    }
+  });
+
+  function submitOrNext(event: SubmitEvent) {
+    event.preventDefault();
+    if (currentIndex < count - 1) {
       currentIndex += 1;
     } else {
       save();
@@ -33,16 +42,19 @@
 
   function toggleDuplicate() {
     if (entry) {
-      entry.meta.__duplicate__ = !isDuplicate(entry);
+      entries[currentIndex] = entry.set_meta(
+        "__duplicate__",
+        !entry.is_duplicate(),
+      );
     }
   }
 
-  $: current_index_from_one = currentIndex + 1;
-  $: total_without_duplicates = entries.length - duplicates;
+  let current_index_from_one = $derived(currentIndex + 1);
+  let count_without_duplicates = $derived(count - count_duplicates);
 </script>
 
 <ModalBase {shown} closeHandler={close}>
-  <form novalidate={duplicate} on:submit|preventDefault={submitOrNext}>
+  <form novalidate={duplicate} onsubmit={submitOrNext}>
     <h3>{_("Import")}</h3>
     {#if entry}
       <div class="flex-row">
@@ -50,8 +62,8 @@
           Entry
           {current_index_from_one}
           of
-          {entries.length}
-          ({total_without_duplicates}
+          {count}
+          ({count_without_duplicates}
           to import):
         </h3>
         <span class="spacer"></span>
@@ -59,26 +71,33 @@
           <input
             type="checkbox"
             checked={duplicate}
-            on:click={toggleDuplicate}
+            onclick={toggleDuplicate}
           />
-          ignore duplicate
+          {_("ignore duplicate")}
         </label>
       </div>
       <div class:duplicate>
-        <Entry bind:entry />
+        <Entry
+          bind:entry={
+            () => entry,
+            (entry: EntryType) => {
+              entries[currentIndex] = entry;
+            }
+          }
+        />
       </div>
       <div class="flex-row">
         {#if currentIndex > 0}
           <button
             type="button"
             class="muted"
-            on:click={() => {
+            onclick={() => {
               currentIndex = 0;
             }}
           >
             ⏮
           </button>
-          <button type="button" class="muted" on:click={previousEntry}>
+          <button type="button" class="muted" onclick={previousEntry}>
             {_("Previous")}
           </button>
         {/if}
@@ -88,7 +107,7 @@
           <button
             type="button"
             class="muted"
-            on:click={() => {
+            onclick={() => {
               currentIndex = entries.length - 1;
             }}
           >
@@ -97,12 +116,12 @@
         {:else}<button type="submit">{_("Save")}</button>{/if}
       </div>
       <hr />
-      {#if entry.meta.__source__}
+      {#if entry.meta.get("__source__")}
         <h3>
           {_("Source")}
           {#if entry.meta.lineno}({_("Line")}: {entry.meta.lineno}){/if}
         </h3>
-        <pre>{entry.meta.__source__}</pre>
+        <pre>{entry.meta.get("__source__")}</pre>
       {/if}
     {/if}
   </form>

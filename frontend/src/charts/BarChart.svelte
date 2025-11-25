@@ -62,7 +62,10 @@
   let yExtent = $derived(
     showStackedBars
       ? extent(stacks.flatMap(([, s]) => s.flat(2)))
-      : extent(bar_groups.map((d) => d.values).flat(), (d) => d.value),
+      : extent(
+          bar_groups.flatMap((d) => d.values),
+          (d) => d.value,
+        ),
   );
   let y = $derived(
     scaleLinear([innerHeight, 0]).domain(padExtent(includeZero(yExtent))),
@@ -87,11 +90,11 @@
   <g transform={`translate(${offset.toString()},${margin.top.toString()})`}>
     <Axis x axis={xAxis} {innerHeight} />
     <Axis y axis={yAxis} lineAtZero={y(0)} />
-    {#each bar_groups as group}
+    {#each bar_groups as group (group.date)}
       <g
         class="group"
         class:desaturate={group.date > today}
-        use:followingTooltip={() => chart.tooltipText($ctx, group)}
+        {@attach followingTooltip(() => chart.tooltipText($ctx, group))}
         transform={`translate(${(x0(group.label) ?? 0).toString()},0)`}
       >
         <rect
@@ -112,7 +115,7 @@
           />
         </a>
         {#if !showStackedBars}
-          {#each group.values as { currency, value, budget }}
+          {#each group.values as { currency, value, budget } (currency)}
             <rect
               fill={$currenciesScale(currency)}
               width={x1.bandwidth()}
@@ -132,8 +135,8 @@
       </g>
     {/each}
     {#if showStackedBars}
-      {#each stacks as [currency, account_stacks]}
-        {#each account_stacks as stack}
+      {#each stacks as [currency, account_stacks] (currency)}
+        {#each account_stacks as stack (stack.key)}
           {@const account = stack.key}
           <a href={$urlForAccount(account)}>
             <g
@@ -153,7 +156,7 @@
               }}
               role="img"
             >
-              {#each stack as bar}
+              {#each stack as bar (bar.data.date)}
                 <rect
                   class:desaturate={bar.data.date > today}
                   width={x1.bandwidth()}
@@ -161,13 +164,14 @@
                   y={y(Math.max(bar[0], bar[1]))}
                   height={Math.abs(y(bar[1]) - y(bar[0]))}
                   fill={colorScale(account)}
-                  use:followingTooltip={() =>
+                  {@attach followingTooltip(() =>
                     chart.tooltipTextAccount(
                       $ctx,
                       bar.data,
                       account,
                       $chartToggledCurrencies,
-                    )}
+                    ),
+                  )}
                 />
               {/each}
             </g>

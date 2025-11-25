@@ -4,8 +4,12 @@
   import { _ } from "../../i18n";
   import { keyboardShortcut } from "../../keyboard-shortcuts";
 
-  export let value: string;
-  export let submit: () => void;
+  interface Props {
+    value: string;
+    submit: () => void;
+  }
+
+  let { value = $bindable(), submit }: Props = $props();
 
   const { editor, renderEditor } = initQueryEditor(
     value,
@@ -16,14 +20,21 @@
     submit,
   );
 
-  $: if (value !== editor.state.sliceDoc()) {
-    editor.dispatch(replaceContents(editor.state, value));
-  }
+  $effect(() => {
+    if (value !== editor.state.sliceDoc()) {
+      editor.dispatch(replaceContents(editor.state, value));
+    }
+  });
 </script>
 
-<form on:submit|preventDefault={submit}>
-  <div use:renderEditor></div>
-  <button type="submit" use:keyboardShortcut={"Control+Enter"}>
+<form
+  onsubmit={(event) => {
+    event.preventDefault();
+    submit();
+  }}
+>
+  <div {@attach renderEditor}></div>
+  <button type="submit" {@attach keyboardShortcut("Control+Enter")}>
     {_("Submit")}
   </button>
 </form>

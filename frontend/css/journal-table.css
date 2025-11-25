@@ -1,5 +1,10 @@
 /* stylelint-disable no-descending-specificity */
 
+.flex-table {
+  display: flex;
+  flex-direction: column;
+}
+
 .flex-table p,
 .flex-table li,
 .flex-table ul,
@@ -73,11 +78,19 @@
 .journal.show-note .note,
 .journal.show-open .open,
 .journal.show-pad .pad,
-.journal.show-query .query,
+.journal.show-query .query {
+  display: block;
+}
+
+/* Show metadata and postings if it was toggled for the whole journal. */
 .journal.show-metadata .metadata,
-.journal.show-postings .postings,
-.transaction.show-postings .postings,
-.transaction.show-postings .metadata {
+.journal.show-postings .postings {
+  display: block;
+}
+
+/* Show metadata and postings where it was explicitly toggled with the indicators. */
+.journal > li.show-full-entry .postings,
+.journal > li.show-full-entry .metadata {
   display: block;
 }
 

@@ -1,10 +1,8 @@
 <script lang="ts">
-  import type { LanguageSupport } from "@codemirror/language";
   import type { EditorView } from "@codemirror/view";
   import { onMount, untrack } from "svelte";
 
   import { get, put } from "../../api";
-  import type { SourceFile } from "../../api/validators";
   import {
     replaceContents,
     scrollToLine,
@@ -14,17 +12,17 @@
   import SaveButton from "../../editor/SaveButton.svelte";
   import { log_error } from "../../log";
   import { notify_err } from "../../notifications";
-  import router from "../../router";
-  import { errors, fava_options } from "../../stores";
-  import { searchParams } from "../../stores/url";
+  import { router } from "../../router";
+  import { errors } from "../../stores";
+  import { insert_entry } from "../../stores/fava_options";
+  import type { EditorReportProps } from ".";
   import EditorMenu from "./EditorMenu.svelte";
 
-  interface Props {
-    source: SourceFile;
-    beancount_language_support: LanguageSupport;
-  }
-
-  let { source, beancount_language_support }: Props = $props();
+  let {
+    source,
+    beancount_language_support,
+    line_search_param,
+  }: EditorReportProps = $props();
 
   let file_path = $derived(source.file_path);
 
@@ -90,32 +88,25 @@
   });
 
   $effect(() => {
-    // Go to line if the edited file changes.
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    file_path;
-    untrack(() => {
-      const opts = $fava_options.insert_entry.filter(
-        (f) => f.filename === file_path,
-      );
-      const last_insert_opt = opts[opts.length - 1];
-      const line = parseInt($searchParams.get("line") ?? "0", 10);
-      let line_to_scroll_to = null;
-      if (line > 0) {
-        line_to_scroll_to = line;
-      } else if (last_insert_opt) {
-        line_to_scroll_to = last_insert_opt.lineno - 1;
-      }
-      editor.dispatch(
-        scrollToLine(editor.state, line_to_scroll_to ?? editor.state.doc.lines),
-      );
-    });
+    // Go to line if the edited file changes. The line number is obtained from the
+    // URL, last file insert option, or last file line (in that order).
+    const last_insert_opt = untrack(() =>
+      $insert_entry.filter((f) => f.filename === file_path).at(-1),
+    );
+    let line = editor.state.doc.lines;
+    if (line_search_param != null) {
+      line = line_search_param;
+    } else if (last_insert_opt) {
+      line = last_insert_opt.lineno - 1;
+    }
+    editor.dispatch(scrollToLine(editor.state, line));
   });
 
   $effect(() => {
     // Update diagnostics, showing errors in the editor
     // Only show errors for this file, or general errors (AKA no source)
     const errorsForFile = $errors.filter(
-      (err) => err.source === null || err.source.filename === file_path,
+      (err) => err.source == null || err.source.filename === file_path,
     );
     editor.dispatch(setErrors(editor.state, errorsForFile));
   });
@@ -125,7 +116,7 @@
       ? "There are unsaved changes. Are you sure you want to leave?"
       : null;
 
-  onMount(() => router.addInteruptHandler(checkEditorChanges));
+  onMount(() => router.add_interrupt_handler(checkEditorChanges));
 </script>
 
 <form
@@ -138,7 +129,7 @@
   <EditorMenu {file_path} {editor}>
     <SaveButton {changed} {saving} />
   </EditorMenu>
-  <div use:renderEditor></div>
+  <div {@attach renderEditor}></div>
 </form>
 
 <style>

@@ -1,6 +1,9 @@
 import { derived, get as store_get } from "svelte/store";
 
-import { base_url, fava_options } from "./stores";
+import type { Result } from "./lib/result";
+import { err, ok } from "./lib/result";
+import { base_url } from "./stores";
+import { use_external_editor } from "./stores/fava_options";
 import { syncedSearchParams } from "./stores/url";
 
 /**
@@ -8,11 +11,12 @@ import { syncedSearchParams } from "./stores/url";
  */
 export function getUrlPath(
   url: Pick<URL | Location, "pathname">,
-): string | null {
+): Result<string, string> {
+  const { pathname } = url;
   const $base_url = store_get(base_url);
-  return $base_url && url.pathname.startsWith($base_url)
-    ? decodeURI(url.pathname.slice($base_url.length))
-    : null;
+  return $base_url && pathname.startsWith($base_url)
+    ? ok(decodeURI(pathname.slice($base_url.length)))
+    : err(`Path '${pathname}' not relative to base url '${$base_url}'.`);
 }
 
 /**
@@ -69,11 +73,6 @@ export const urlForRaw = derived(
       params?: Record<string, string | number | undefined>,
     ): string =>
       urlForInternal($base_url, null, report, params),
-);
-
-const use_external_editor = derived(
-  fava_options,
-  ($fava_options) => $fava_options.use_external_editor,
 );
 
 /** URL for the editor to the source location of an entry. */

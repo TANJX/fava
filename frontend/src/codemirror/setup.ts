@@ -35,11 +35,11 @@ import {
   placeholder,
   rectangularSelection,
 } from "@codemirror/view";
-import type { Action } from "svelte/action";
+import type { Attachment } from "svelte/attachments";
 import { get as store_get } from "svelte/store";
 
 import { log_error } from "../log";
-import { fava_options } from "../stores";
+import { currency_column, indent } from "../stores/fava_options";
 import { getBeancountLanguageSupport } from "./beancount";
 import {
   beancountEditorHighlight,
@@ -76,22 +76,28 @@ const baseExtensions = [
 ];
 
 /** An editor and a function to attach it to a DOM element. */
-interface EditorAndAction {
+interface EditorAndAttachment {
   editor: EditorView;
-  renderEditor: Action<HTMLDivElement | HTMLPreElement>;
+  renderEditor: Attachment<HTMLDivElement | HTMLPreElement>;
 }
 
 function setup(
   value: string | undefined,
   extensions: Extension[],
-): EditorAndAction {
+): EditorAndAttachment {
   const view = new EditorView({
-    state: EditorState.create({ doc: value, extensions }),
+    state: EditorState.create(
+      value !== undefined ? { doc: value, extensions } : { extensions },
+    ),
   });
   return {
     editor: view,
     renderEditor: (el) => {
       el.appendChild(view.dom);
+
+      return () => {
+        el.removeChild(view.dom);
+      };
     },
   };
 }
@@ -99,7 +105,7 @@ function setup(
 /**
  * A basic readonly editor for an asynchronously loaded document.
  */
-export function initDocumentPreviewEditor(value: string): EditorAndAction {
+export function initDocumentPreviewEditor(value: string): EditorAndAttachment {
   return setup(value, [
     baseExtensions,
     EditorState.readOnly.of(true),
@@ -135,12 +141,13 @@ export function initBeancountEditor(
   onDocChanges: (s: EditorState) => void,
   commands: KeyBinding[],
   beancount: LanguageSupport,
-): EditorAndAction {
-  const { indent, currency_column } = store_get(fava_options);
+): EditorAndAttachment {
+  const $indent = store_get(indent);
+  const $currency_column = store_get(currency_column);
   return setup(value, [
     beancount,
-    indentUnit.of(" ".repeat(indent)),
-    ...(currency_column ? [rulerPlugin(currency_column - 1)] : []),
+    indentUnit.of(" ".repeat($indent)),
+    ...($currency_column ? [rulerPlugin($currency_column - 1)] : []),
     keymap.of(commands),
     EditorView.updateListener.of((update) => {
       if (update.docChanged) {
@@ -155,7 +162,7 @@ export function initBeancountEditor(
 /**
  * A basic readonly BQL editor that only does syntax highlighting.
  */
-export function initReadonlyQueryEditor(value: string): EditorAndAction {
+export function initReadonlyQueryEditor(value: string): EditorAndAttachment {
   return setup(value, [
     bql,
     syntaxHighlighting(beancountQueryHighlight),
@@ -171,7 +178,7 @@ export function initQueryEditor(
   onDocChanges: (s: EditorState) => void,
   _placeholder: string,
   submit: () => void,
-): EditorAndAction {
+): EditorAndAttachment {
   return setup(value, [
     bql,
     EditorView.updateListener.of((update) => {

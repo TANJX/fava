@@ -10,45 +10,52 @@
   import AccountIndicator from "../../sidebar/AccountIndicator.svelte";
   import { Sorter, UnsortedColumn } from "../../sort";
   import SortHeader from "../../sort/SortHeader.svelte";
-  import { accounts_set } from "../../stores";
+  import { accounts_set, currency_name } from "../../stores";
   import { ctx, num } from "../../stores/format";
   import type { QueryCell, QueryResultTable } from "./query_table";
   import { Inventory } from "./query_table";
 
-  /** The table to render. */
-  export let table: QueryResultTable;
-  /** A column name to filter by if empty (expected to be an Inventory column).  */
-  export let filter_empty: string | undefined = undefined;
+  interface Props {
+    /** The table to render. */
+    table: QueryResultTable;
+    /** A column name to filter by if empty (expected to be an Inventory column).  */
+    filter_empty?: string;
+  }
 
-  $: filter_empty_column_number = table.columns.findIndex(
-    (column) => column.name === filter_empty,
+  let { table, filter_empty }: Props = $props();
+
+  let filter_empty_column_index = $derived(
+    table.columns.findIndex((column) => column.name === filter_empty),
   );
 
-  $: filtered_rows =
-    filter_empty_column_number > -1
+  let filtered_rows = $derived(
+    filter_empty_column_index > -1
       ? table.rows.filter((row) => {
-          const cell = row[filter_empty_column_number];
+          const cell = row[filter_empty_column_index];
           return !(cell instanceof Inventory && is_empty(cell.value));
         })
-      : table.rows;
+      : table.rows,
+  );
 
-  let sorter = new Sorter<QueryCell[]>(new UnsortedColumn("<Dummy>"), "asc");
-  $: sorted_rows = sorter.sort(filtered_rows);
+  let sorter = $state.raw(
+    new Sorter<QueryCell[]>(new UnsortedColumn("<Dummy>"), "asc"),
+  );
+  let sorted_rows = $derived(sorter.sort(filtered_rows));
 </script>
 
 <table>
   <thead>
     <tr>
-      {#each table.columns as column}
+      {#each table.columns as column (column.name)}
         <SortHeader bind:sorter {column} />
       {/each}
     </tr>
   </thead>
   <tbody>
-    {#each sorted_rows as row}
+    {#each sorted_rows as row (row)}
       <tr>
-        {#each row as value, index}
-          {#if value === null}
+        {#each row as value, index (index)}
+          {#if value == null}
             <td>&nbsp;</td>
           {:else if typeof value === "boolean"}
             <td>
@@ -80,19 +87,25 @@
               {day(value)}
             </td>
           {:else if value instanceof Amount}
-            <td class="num">
+            <td class="num" title={$currency_name(value.currency)}>
               {value.str($ctx)}
             </td>
           {:else if value instanceof Position}
             <td class="num">
-              {value.units.str($ctx)}
+              <span title={$currency_name(value.units.currency)}>
+                {value.units.str($ctx)}
+              </span>
               {#if value.cost}
-                &lbrace;{value.cost.str($ctx)}&rbrace;{/if}
+                &lbrace;<span title={$currency_name(value.cost.currency)}>
+                  {value.cost.str($ctx)}
+                </span>&rbrace;{/if}
             </td>
           {:else if value instanceof Inventory}
             <td class="num">
-              {#each Object.entries(value.value) as [currency, number]}
-                {$ctx.amount(number, currency)}
+              {#each Object.entries(value.value) as [currency, number] (currency)}
+                <span title={$currency_name(currency)}
+                  >{$ctx.amount(number, currency)}</span
+                >
                 <br />
               {/each}
             </td>

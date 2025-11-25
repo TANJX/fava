@@ -5,19 +5,18 @@ import iso4217currencies from "../lib/iso4217";
 import { localStorageSyncedStore } from "../lib/store";
 import type { ValidationT } from "../lib/validation";
 import { array, constants, string } from "../lib/validation";
-import {
-  conversion_currencies,
-  currencies_sorted,
-  operating_currency,
-} from ".";
-
-/** Whether the charts should be shown - this applies globally to all charts. */
-export const showCharts = writable(true);
+import { currencies_sorted } from ".";
+import { conversion_currencies } from "./fava_options";
+import { operating_currency } from "./options";
 
 /** This store is used to switch to the same chart (as identified by name) on navigation. */
 export const lastActiveChartName = writable<string | null>(null);
 
-const hierarchy_chart_mode_validator = constants("treemap", "sunburst");
+const hierarchy_chart_mode_validator = constants(
+  "treemap",
+  "sunburst",
+  "icicle",
+);
 type HierarchyChartMode = ValidationT<typeof hierarchy_chart_mode_validator>;
 
 /** The currently selected hierarchy chart mode. */
@@ -28,6 +27,7 @@ export const hierarchyChartMode = localStorageSyncedStore<HierarchyChartMode>(
   () => [
     ["treemap", _("Treemap")],
     ["sunburst", _("Sunburst")],
+    ["icicle", _("Icicle")],
   ],
 );
 
@@ -72,12 +72,10 @@ const currency_suggestions = derived(
   ([$operating_currency, $currencies_sorted, $conversion_currencies]) =>
     $conversion_currencies.length > 0
       ? $conversion_currencies
-      : [
+      : new Set([
           ...$operating_currency,
-          ...$currencies_sorted.filter(
-            (c) => !$operating_currency.includes(c) && iso4217currencies.has(c),
-          ),
-        ],
+          ...$currencies_sorted.filter((c) => iso4217currencies.has(c)),
+        ]),
 );
 
 /** The possible conversion options and their human-readable descriptions. */

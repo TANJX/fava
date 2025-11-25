@@ -266,9 +266,9 @@ class FileModule(FavaModule):
                 ):
                     continue
                 try:
-                    yield Markup(get_entry_slice(entry)[0] + "\n")  # noqa: RUF035
+                    yield Markup(get_entry_slice(entry)[0] + "\n")  # noqa: S704
                 except (KeyError, FileNotFoundError):
-                    yield Markup(  # noqa: RUF035
+                    yield Markup(  # noqa: S704
                         to_string(
                             entry,
                             self.ledger.fava_options.currency_column,
@@ -379,11 +379,11 @@ def save_entry_slice(
     if _sha256_str(entry_source) != sha256sum:
         raise ExternallyChangedError(path)
 
-    lines = (
-        lines[:first_entry_line]
-        + [source_slice + "\n"]
-        + lines[first_entry_line + len(entry_lines) :]
-    )
+    lines = [
+        *lines[:first_entry_line],
+        source_slice + "\n",
+        *lines[first_entry_line + len(entry_lines) :],
+    ]
     newline = _file_newline_character(path)
     with path.open("w", encoding="utf-8", newline=newline) as file:
         file.writelines(lines)
@@ -422,9 +422,9 @@ def delete_entry_slice(
             line = lines[last_entry_line]
         except IndexError:
             break
-        if line.strip():
+        if line.strip():  # pragma: no cover
             break
-        last_entry_line += 1
+        last_entry_line += 1  # pragma: no cover
     lines = lines[:first_entry_line] + lines[last_entry_line:]
     newline = _file_newline_character(path)
     with path.open("w", encoding="utf-8", newline=newline) as file:

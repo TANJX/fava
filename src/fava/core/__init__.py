@@ -6,11 +6,12 @@ from datetime import date
 from datetime import timedelta
 from functools import cached_property
 from functools import lru_cache
+from itertools import islice
 from itertools import takewhile
+from os.path import normpath
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from beancount.core.data import iter_entry_dates
 from beancount.core.inventory import Inventory
 from beancount.utils.encryption import is_encrypted_file
 
@@ -21,6 +22,7 @@ from fava.beans.account import account_tester
 from fava.beans.account import get_entry_accounts
 from fava.beans.funcs import get_position
 from fava.beans.funcs import hash_entry
+from fava.beans.helpers import slice_entry_dates
 from fava.beans.load import load_uncached
 from fava.beans.prices import FavaPriceMap
 from fava.beans.str import to_string
@@ -32,6 +34,7 @@ from fava.core.commodities import CommoditiesModule
 from fava.core.conversion import cost_or_value
 from fava.core.extensions import ExtensionModule
 from fava.core.fava_options import parse_options
+from fava.core.file import _incomplete_sortkey
 from fava.core.file import FileModule
 from fava.core.file import get_entry_slice
 from fava.core.filters import AccountFilter
@@ -97,6 +100,7 @@ class FilteredLedger:
         "__dict__",  # for the cached_property decorator
         "_date_first",
         "_date_last",
+        "_pages",
         "date_range",
         "entries",
         "ledger",
@@ -114,6 +118,7 @@ class FilteredLedger:
     ) -> None:
         self.ledger = ledger
         self.date_range: DateRange | None = None
+        self._pages: list[Sequence[tuple[int, Directive]]] | None = None
 
         entries = ledger.all_entries
         if account:
@@ -151,6 +156,13 @@ class FilteredLedger:
         return None
 
     @cached_property
+    def entries_with_all_prices(self) -> Sequence[Directive]:
+        """The filtered entries, with all prices added back in for queries."""
+        entries = [*self.entries, *self.ledger.all_entries_by_type.Price]
+        entries.sort(key=_incomplete_sortkey)
+        return entries
+
+    @cached_property
     def root_tree(self) -> Tree:
         """A root tree."""
         return Tree(self.entries)
@@ -162,12 +174,14 @@ class FilteredLedger:
         tree.cap(self.ledger.options, self.ledger.fava_options.unrealized)
         return tree
 
-    @listify
-    def interval_ranges(self, interval: Interval) -> Iterable[DateRange]:
+    def interval_ranges(self, interval: Interval) -> Sequence[DateRange]:
         """Yield date ranges corresponding to interval boundaries."""
         if not self._date_first or not self._date_last:
             return []
-        return dateranges(self._date_first, self._date_last, interval)
+        complete = not self.date_range
+        return dateranges(
+            self._date_first, self._date_last, interval, complete=complete
+        )
 
     def prices(self, base: str, quote: str) -> Sequence[tuple[date, Decimal]]:
         """List all prices."""
@@ -199,6 +213,28 @@ class FilteredLedger:
         if close_date is None:
             return False
         return close_date < date_range.end if date_range else True
+
+    def paginate_journal(
+        self, page: int, per_page: int = 1000
+    ) -> tuple[Sequence[tuple[int, Directive]], int]:
+        """Get entries for a journal page with pagination info.
+
+        Args:
+            page: Page number (1-indexed).
+            per_page: Number of entries per page.
+
+        Returns:
+            JournalPage with page_entries as (global_index, directive) tuples
+            in reverse chronological order total_pages.
+        """
+        if self._pages is None:
+            self._pages = []
+            enumerated = reversed(list(enumerate(self.entries)))
+            while batch := tuple(islice(enumerated, per_page)):
+                self._pages.append(batch)
+        if not self._pages and page == 1:
+            return [], 0
+        return self._pages[page - 1], len(self._pages)
 
 
 class FavaLedger:
@@ -442,8 +478,8 @@ class FavaLedger:
         interval_ranges = list(reversed(filtered.interval_ranges(interval)))
         interval_balances = [
             Tree(
-                iter_entry_dates(
-                    filtered.entries,  # type: ignore[arg-type]
+                slice_entry_dates(
+                    filtered.entries,
                     date.min if accumulate else date_range.begin,
                     date_range.end,
                 ),
@@ -463,7 +499,7 @@ class FavaLedger:
         *,
         with_children: bool,
     ) -> Iterable[
-        tuple[Directive, SimpleCounterInventory, SimpleCounterInventory]
+        tuple[int, Directive, SimpleCounterInventory, SimpleCounterInventory]
     ]:
         """Journal for an account.
 
@@ -483,7 +519,7 @@ class FavaLedger:
 
         prices = self.prices
         balance = CounterInventory()
-        for entry in filtered.entries:
+        for index, entry in enumerate(filtered.entries):
             change = CounterInventory()
             entry_is_relevant = False
             postings = getattr(entry, "postings", None)
@@ -498,6 +534,7 @@ class FavaLedger:
 
             if entry_is_relevant:
                 yield (
+                    index,
                     entry,
                     cost_or_value(change, conversion, prices, entry.date),
                     cost_or_value(balance, conversion, prices, entry.date),
@@ -609,7 +646,7 @@ class FavaLedger:
 
         accounts = set(get_entry_accounts(entry))
         filename, _ = get_position(entry)
-        full_path = Path(filename).parent / value
+        full_path = Path(normpath(Path(filename).parent / value))
         for document in self.all_entries_by_type.Document:
             document_path = Path(document.filename)
             if document_path == full_path:

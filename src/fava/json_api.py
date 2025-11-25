@@ -24,11 +24,12 @@ from flask import Blueprint
 from flask import get_template_attribute
 from flask import jsonify
 from flask import request
-from flask_babel import gettext  # type: ignore[import-untyped]
+from flask_babel import gettext
 
 from fava.beans.abc import Document
 from fava.beans.abc import Event
 from fava.context import g
+from fava.core import EntryNotFoundForHashError
 from fava.core.documents import filepath_in_document_folder
 from fava.core.documents import is_document_or_import_file
 from fava.core.filters import FilterError
@@ -50,6 +51,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from flask.wrappers import Response
 
+    from fava.beans.abc import Directive
     from fava.core.ingest import FileImporters
     from fava.core.query import QueryResultTable
     from fava.core.query import QueryResultText
@@ -85,7 +87,7 @@ class IncorrectTypeValidationError(ValidationError):
 def json_err(msg: str, status: HTTPStatus) -> Response:
     """Jsonify the error message."""
     res = jsonify({"error": msg})
-    res.status = status  # type: ignore[assignment]
+    res.status = status
     return res
 
 
@@ -186,6 +188,11 @@ def _(error: ValidationError) -> Response:
     return json_err(f"Invalid API request: {error!s}", HTTPStatus.BAD_REQUEST)
 
 
+@json_api.errorhandler(EntryNotFoundForHashError)
+def _(error: EntryNotFoundForHashError) -> Response:
+    return json_err(error.message, HTTPStatus.NOT_FOUND)
+
+
 def validate_func_arguments(
     func: Callable[..., Any],
 ) -> Callable[[Mapping[str, str]], list[str]] | None:
@@ -284,7 +291,7 @@ def get_payee_accounts(payee: str) -> Sequence[str]:
 def get_query(query_string: str) -> QueryResultTable | QueryResultText:
     """Run a Beancount query."""
     return g.ledger.query_shell.execute_query_serialised(
-        g.filtered.entries, query_string
+        g.filtered.entries_with_all_prices, query_string
     )
 
 
@@ -343,6 +350,19 @@ def get_payee_transaction(payee: str) -> Any:
     """Last transaction for the given payee."""
     entry = g.ledger.attributes.payee_transaction(payee)
     return serialise(entry) if entry else None
+
+
+@api_endpoint
+def get_narration_transaction(narration: str) -> Any:
+    """Last transaction for the given narration."""
+    entry = g.ledger.attributes.narration_transaction(narration)
+    return serialise(entry) if entry else None
+
+
+@api_endpoint
+def get_narrations() -> Sequence[str]:
+    """List of all narrations in the ledger."""
+    return g.ledger.attributes.narrations
 
 
 @api_endpoint
@@ -481,6 +501,13 @@ def put_upload_import_file() -> str:
 
 ########################################################################
 # Reports
+
+
+@api_endpoint
+def get_journal() -> Sequence[Directive]:
+    """Get all (filtered) entries."""
+    g.ledger.changed()
+    return [serialise(e) for e in g.filtered.entries]
 
 
 @api_endpoint
@@ -752,18 +779,22 @@ def get_account_report() -> AccountReportJournal | AccountReportTree:
                     date_range.end_inclusive,
                     with_cost=False,
                 )
-                for tree, date_range in zip(interval_balances, dates)
+                for tree, date_range in zip(
+                    interval_balances, dates, strict=True
+                )
             ],
             dates=dates,
             budgets=budgets,
         )
 
     journal = get_template_attribute("_journal_table.html", "journal_table")
-    entries = g.ledger.account_journal(
-        g.filtered,
-        account_name,
-        g.conversion,
-        with_children=g.ledger.fava_options.account_journal_include_children,
+    entries = reversed(
+        g.ledger.account_journal(
+            g.filtered,
+            account_name,
+            g.conversion,
+            with_children=g.ledger.fava_options.account_journal_include_children,
+        )
     )
     return AccountReportJournal(
         charts,

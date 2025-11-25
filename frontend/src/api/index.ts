@@ -6,7 +6,7 @@ import { fetchJSON } from "../lib/fetch";
 import type { ValidationT } from "../lib/validation";
 import { string } from "../lib/validation";
 import { notify, notify_err } from "../notifications";
-import router from "../router";
+import { router } from "../router";
 import type { Filters, FiltersConversionInterval } from "../stores/filters";
 import type { GetAPIValidators, SourceFile } from "./validators";
 import { getAPIValidators } from "./validators";
@@ -75,6 +75,8 @@ interface GetAPIParams {
   options: undefined;
   payee_accounts: { payee: string };
   payee_transaction: { payee: string };
+  narration_transaction: { narration: string };
+  narrations: undefined;
   query: Filters & { query_string: string };
   source: { filename: string };
 }

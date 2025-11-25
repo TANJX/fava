@@ -69,14 +69,14 @@
   }}
   role="img"
 >
-  <circle style="opacity:0" r={radius} />
+  <circle r={radius} />
   <text class="account" text-anchor="middle">
     {(current ?? root).data.account}
   </text>
   <text class="balance" dy="1.2em" text-anchor="middle">
     {balanceText(current ?? root)}
   </text>
-  {#each nodes as d}
+  {#each nodes as d (d.data.account)}
     <a href={$urlForAccount(d.data.account)} aria-label={d.data.account}>
       <path
         onmouseover={() => {
@@ -96,6 +96,10 @@
 </g>
 
 <style>
+  circle {
+    opacity: 0;
+  }
+
   .half {
     opacity: 0.5;
   }

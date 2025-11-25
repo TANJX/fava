@@ -1,7 +1,8 @@
 <script lang="ts">
   import { keyboardShortcut } from "../keyboard-shortcuts";
-  import router from "../router";
-  import { ledger_title, ledgerData } from "../stores";
+  import { router } from "../router";
+  import { ledgerData } from "../stores";
+  import { ledger_title } from "../stores/options";
   import FilterForm from "./FilterForm.svelte";
   import HeaderIcon from "./HeaderIcon.svelte";
   import { has_changes } from "./page-title";
@@ -18,7 +19,7 @@
     {#if has_dropdown}
       <div class="beancount-files">
         <ul>
-          {#each other_ledgers as [name, url]}
+          {#each other_ledgers as [name, url] (url)}
             <li>
               <a href={url} data-remote>{name}</a>
             </li>
@@ -31,8 +32,8 @@
     type="button"
     hidden={!$has_changes}
     class="reload-page"
-    use:keyboardShortcut={"r"}
-    onclick={router.reload.bind(router)}
+    {@attach keyboardShortcut("r")}
+    onclick={router.reload}
   >
     &#8635;
   </button>

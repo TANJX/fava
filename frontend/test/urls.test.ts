@@ -1,9 +1,10 @@
 import { get as store_get } from "svelte/store";
 import { test } from "uvu";
-import assert from "uvu/assert";
+import * as assert from "uvu/assert";
 
 import { getUrlPath, urlForAccount, urlForInternal } from "../src/helpers";
-import { base_url } from "../src/stores";
+import { ok } from "../src/lib/result";
+import { base_url } from "../src/stores/index";
 import { initialiseLedgerData } from "./helpers";
 
 test.before(initialiseLedgerData);
@@ -28,12 +29,12 @@ test("get path for account", () => {
 test("extract relative path from URL", () => {
   const $base_url = store_get(base_url);
   assert.equal($base_url, "/long-example/");
-  assert.equal(getUrlPath({ pathname: "/example/asdf" }), null);
-  assert.equal(getUrlPath({ pathname: "/long-example/asdf" }), "asdf");
+  assert.ok(getUrlPath({ pathname: "/example/asdf" }).is_err);
+  assert.equal(getUrlPath({ pathname: "/long-example/asdf" }), ok("asdf"));
   assert.equal(encodeURI("Ä€/asdf"), "%C3%84%E2%82%AC/asdf");
   assert.equal(
     getUrlPath({ pathname: "/long-example/%C3%84%E2%82%AC/asdf" }),
-    "Ä€/asdf",
+    ok("Ä€/asdf"),
   );
 });
 

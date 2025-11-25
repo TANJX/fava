@@ -27,7 +27,7 @@ from urllib.parse import urlencode
 from urllib.parse import urlparse
 from urllib.parse import urlunparse
 
-import markdown2  # type: ignore[import-untyped]
+import markdown2
 from beancount import __version__ as beancount_version
 from flask import abort
 from flask import current_app
@@ -39,7 +39,7 @@ from flask import request
 from flask import send_file
 from flask import url_for as flask_url_for
 from flask_cors import CORS
-from flask_babel import Babel  # type: ignore[import-untyped]
+from flask_babel import Babel
 from flask_babel import get_translations
 from markupsafe import Markup
 from werkzeug.utils import secure_filename
@@ -219,7 +219,8 @@ def url_for(endpoint: str, **values: str) -> str:
 
 def translations() -> dict[str, str]:
     """Get translations catalog."""
-    return get_translations()._catalog  # type: ignore[no-any-return]  # noqa: SLF001
+    catalog = get_translations()._catalog  # noqa: SLF001
+    return {k: v for k, v in catalog.items() if isinstance(k, str) and k}
 
 
 def _setup_template_config(fava_app: Flask, *, incognito: bool) -> None:
@@ -390,7 +391,7 @@ def _setup_routes(fava_app: Flask) -> None:  # noqa: PLR0915
 
         g.extension = ext
         template = ext.jinja_env.get_template(f"{ext.name}.html")
-        content = Markup(template.render(ledger=g.ledger, extension=ext))  # noqa: RUF035
+        content = Markup(template.render(ledger=g.ledger, extension=ext))  # noqa: S704
         return render_template(
             "_layout.html",
             content=content,
@@ -401,7 +402,7 @@ def _setup_routes(fava_app: Flask) -> None:  # noqa: PLR0915
     def download_query(result_format: str) -> Response:
         """Download a query result."""
         name, data = g.ledger.query_shell.query_to_file(
-            g.filtered.entries,
+            g.filtered.entries_with_all_prices,
             request.args.get("query_string", ""),
             result_format,
         )
@@ -423,14 +424,16 @@ def _setup_routes(fava_app: Flask) -> None:  # noqa: PLR0915
         """Fava's included documentation."""
         if page_slug not in HELP_PAGES:
             abort(404)
-        html = markdown2.markdown_path(
-            (Path(__file__).parent / "help" / (page_slug + ".md")),
+        help_path = Path(__file__).parent / "help" / (page_slug + ".md")
+        contents = help_path.read_text(encoding="utf-8")
+        html = markdown2.markdown(
+            contents,
             extras=["fenced-code-blocks", "tables", "header-ids"],
         )
         return render_template(
             "help.html",
             page_slug=page_slug,
-            help_html=Markup(  # noqa: RUF035
+            help_html=Markup(  # noqa: S704
                 render_template_string(
                     html,
                     beancount_version=beancount_version,
@@ -473,7 +476,7 @@ def _setup_babel(fava_app: Flask) -> None:
         lang = g.ledger.fava_options.language
         return lang or request.accept_languages.best_match(["en", *LOCALES])
 
-    Babel(fava_app, locale_selector=_get_locale)
+    Babel(fava_app, locale_selector=_get_locale)  # type: ignore[no-untyped-call]
 
 
 def create_app(

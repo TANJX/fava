@@ -2,13 +2,15 @@
   import { get } from "../api";
   import { getBeancountLanguageSupport } from "../codemirror/beancount";
   import SliceEditor from "../editor/SliceEditor.svelte";
-  import { urlHash } from "../stores/url";
+  import { _ } from "../i18n";
+  import ReportLoadError from "../reports/ReportLoadError.svelte";
+  import { hash } from "../stores/url";
   import EntryContext from "./EntryContext.svelte";
   import ModalBase from "./ModalBase.svelte";
 
-  $: shown = $urlHash.startsWith("context");
-  $: entry_hash = shown ? $urlHash.slice(8) : "";
-  $: content = shown ? get("context", { entry_hash }) : null;
+  let shown = $derived($hash.startsWith("context"));
+  let entry_hash = $derived(shown ? $hash.slice(8) : "");
+  let content = $derived(shown ? get("context", { entry_hash }) : null);
 </script>
 
 <ModalBase {shown}>
@@ -33,8 +35,8 @@
           Loading tree-sitter language failed...
         {/await}
       {/if}
-    {:catch}
-      Loading entry context failed...
+    {:catch error}
+      <ReportLoadError title={_("Context")} {error} />
     {/await}
   </div>
 </ModalBase>

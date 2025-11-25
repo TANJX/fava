@@ -27,7 +27,7 @@ ZERO = Decimal()
 
 def meta_items(meta: Meta | None) -> list[tuple[str, MetaValue]]:
     """Remove keys from a dictionary."""
-    if not meta:
+    if not meta:  # pragma: no cover
         return []
     return [
         (key, value)
@@ -46,15 +46,8 @@ def passthrough_numbers(value: T) -> T:
     return value
 
 
-def format_currency(
-    value: Decimal,
-    currency: str | None = None,
-    *,
-    show_if_zero: bool = False,
-) -> str:
+def format_currency(value: Decimal, currency: str | None = None) -> str:
     """Format a value using the derived precision for a specified currency."""
-    if not value and not show_if_zero:
-        return ""
     return g.ledger.format_decimal(value or ZERO, currency)
 
 
