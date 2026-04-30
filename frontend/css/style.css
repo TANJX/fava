@@ -70,8 +70,8 @@
   --header-color: hsl(0deg 0% 100%);
   --header-background: light-dark(hsl(203deg 100% 32%), hsl(203deg 100% 25%));
   --header-placeholder-color: hsl(203deg 47% 66%);
-  --header-placeholder-background: hsl(203deg 56% 45%); */
-  --header-background: #AB0036;
+  --header-placeholder-background: hsl(203deg 56% 45%);
+  /* --header-background: #AB0036; */
   --header-placeholder-color: #ED96B2;
   --header-placeholder-background: #C13F68;
 

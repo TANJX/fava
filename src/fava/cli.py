@@ -148,7 +148,7 @@ def main(  # noqa: PLR0913
     # Debug mode if profiling is active
     debug = debug or profile
 
-    click.secho(f"Starting Fava on http://{host}:{port} (Mars 2025)", fg="green")
+    click.secho(f"Starting Fava on http://{host}:{port} (Mars 2026)", fg="green")
     if not debug:
         server = Server((host, port), app)
         try:
