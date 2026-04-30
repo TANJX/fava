@@ -410,12 +410,12 @@ class TimeFilter(EntryFilter):
 
     def apply(self, entries: Sequence[Directive]) -> Sequence[Directive]:
         clamped_entries, _ = clamp_opt(
-            entries,  # type: ignore[arg-type]
+            entries,  # type: ignore[arg-type]  # ty:ignore[invalid-argument-type]
             self.date_range.begin,
             self.date_range.end,
             self._options,
         )
-        return clamped_entries  # type: ignore[return-value]
+        return clamped_entries  # type: ignore[return-value]  # ty:ignore[invalid-return-type]
 
 
 LEXER = FilterSyntaxLexer()
@@ -437,7 +437,7 @@ class AdvancedFilter(EntryFilter):
             tokens = LEXER.lex(value)
             self._include = PARSE(
                 lexer="NONE",
-                tokenfunc=lambda toks=tokens: next(toks, None),
+                tokenfunc=lambda toks=tokens: next(toks, None),  # ty:ignore[invalid-argument-type]
             )
         except FilterError as exception:
             exception.message += value

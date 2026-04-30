@@ -10,9 +10,8 @@ from typing import TYPE_CHECKING
 from fava.beans.abc import Open
 from fava.beans.account import parent as account_parent
 from fava.context import g
+from fava.core.conversion import AT_COST
 from fava.core.conversion import AT_VALUE
-from fava.core.conversion import cost_or_value
-from fava.core.conversion import get_cost
 from fava.core.inventory import CounterInventory
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -61,7 +60,7 @@ class TreeNode:
 
     def serialise(
         self,
-        conversion: str | Conversion,
+        conversion: Conversion,
         prices: FavaPriceMap,
         end: datetime.date | None,
         *,
@@ -82,18 +81,18 @@ class TreeNode:
         return (
             SerialisedTreeNode(
                 self.name,
-                cost_or_value(self.balance, conversion, prices, end),
-                cost_or_value(self.balance_children, conversion, prices, end),
+                conversion.apply(self.balance, prices, end),
+                conversion.apply(self.balance_children, prices, end),
                 children,
                 self.has_txns,
-                self.balance.reduce(get_cost),
-                self.balance_children.reduce(get_cost),
+                AT_COST.apply(self.balance),
+                AT_COST.apply(self.balance_children),
             )
             if with_cost
             else SerialisedTreeNode(
                 self.name,
-                cost_or_value(self.balance, conversion, prices, end),
-                cost_or_value(self.balance_children, conversion, prices, end),
+                conversion.apply(self.balance, prices, end),
+                conversion.apply(self.balance_children, prices, end),
                 children,
                 self.has_txns,
             )
@@ -179,7 +178,7 @@ class Tree(dict[str, TreeNode]):
         name: str,
         *,
         insert: bool = False,
-    ) -> TreeNode:
+    ) -> TreeNode:  # ty:ignore[invalid-method-override]
         """Get an account.
 
         Args:
@@ -225,21 +224,19 @@ class Tree(dict[str, TreeNode]):
 
         return net_profit.get(account_name)
 
-    def cap(self, options: BeancountOptions, unrealized_account: str) -> None:
+    def cap(self, options: BeancountOptions) -> None:
         """Transfer Income and Expenses, add conversions and unrealized gains.
 
         Args:
             options: The Beancount options.
-            unrealized_account: The name of the account to post unrealized
-                gains to (as a subaccount of Equity).
         """
         equity = options["name_equity"]
         conversions = CounterInventory(
             {
                 (currency, None): -number
-                for currency, number in self.get("")
-                .balance_children.reduce(get_cost)
-                .items()
+                for currency, number in AT_COST.apply(
+                    self.get("").balance_children
+                ).items()
             },
         )
 
@@ -249,10 +246,11 @@ class Tree(dict[str, TreeNode]):
             conversions,
         )
 
+        unrealized_gains = -self.get("").balance_children
         # Insert unrealized gains.
         self.insert(
-            equity + ":" + unrealized_account,
-            -self.get("").balance_children,
+            equity + ":" + options["account_unrealized_gains"],
+            unrealized_gains,
         )
 
         # Transfer Income and Expenses

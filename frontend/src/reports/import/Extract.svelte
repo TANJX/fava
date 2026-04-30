@@ -1,7 +1,7 @@
 <script lang="ts">
-  import type { Entry as EntryType } from "../../entries";
+  import type { Entry as EntryType } from "../../entries/index.ts";
   import Entry from "../../entry-forms/Entry.svelte";
-  import { _ } from "../../i18n";
+  import { _ } from "../../i18n.ts";
   import ModalBase from "../../modals/ModalBase.svelte";
 
   interface Props {
@@ -17,7 +17,7 @@
   let shown = $derived(count > 0);
 
   let entry = $derived(entries[currentIndex]);
-  let duplicate = $derived(entry?.is_duplicate());
+  let duplicate = $derived(entry?.is_duplicate() ?? false);
   let count_duplicates = $derived(
     entries.filter((e) => e.is_duplicate()).length,
   );
@@ -54,7 +54,7 @@
 </script>
 
 <ModalBase {shown} closeHandler={close}>
-  <form novalidate={duplicate} onsubmit={submitOrNext}>
+  <form class="flex-column" novalidate={duplicate} onsubmit={submitOrNext}>
     <h3>{_("Import")}</h3>
     {#if entry}
       <div class="flex-row">
@@ -76,16 +76,15 @@
           {_("ignore duplicate")}
         </label>
       </div>
-      <div class:duplicate>
-        <Entry
-          bind:entry={
-            () => entry,
-            (entry: EntryType) => {
-              entries[currentIndex] = entry;
-            }
+      <Entry
+        bind:entry={
+          () => entry,
+          (entry: EntryType) => {
+            entries[currentIndex] = entry;
           }
-        />
-      </div>
+        }
+        {duplicate}
+      />
       <div class="flex-row">
         {#if currentIndex > 0}
           <button
@@ -115,8 +114,8 @@
           </button>
         {:else}<button type="submit">{_("Save")}</button>{/if}
       </div>
-      <hr />
       {#if entry.meta.get("__source__")}
+        <hr />
         <h3>
           {_("Source")}
           {#if entry.meta.lineno}({_("Line")}: {entry.meta.lineno}){/if}
@@ -129,11 +128,8 @@
 
 <style>
   pre {
+    margin: 0;
     font-size: 0.9em;
     white-space: pre-wrap;
-  }
-
-  .duplicate {
-    opacity: 0.5;
   }
 </style>

@@ -26,14 +26,8 @@
     "narration": "Payment to Company XYZ REF: 31000161205-6944556-0000463",
     "payee": "",
     "postings": [
-      {
-        "account": "",
-        "amount": "50.00 EUR"
-      },
-      {
-        "account": "Assets:Checking",
-        "amount": "-50.00 EUR"
-      }
+      { "account": "", "amount": "50.00 EUR" },
+      { "account": "Assets:Checking", "amount": "-50.00 EUR" }
     ],
     "t": "Transaction",
     "tags": []
@@ -44,6 +38,32 @@
     "flag": "*",
     "links": [],
     "meta": {
+      "__duplicate__": {
+        "date": "2017-02-14",
+        "flag": "*",
+        "links": [],
+        "meta": {
+          "__tolerances__": { "EUR": 0.005 },
+          "filename": "TEST_DATA_DIR/import.beancount",
+          "lineno": 9
+        },
+        "narration": " BANKOMAT  00000483 K2 UM 11:56",
+        "payee": "",
+        "postings": [
+          {
+            "account": "Assets:Checking",
+            "cost": null,
+            "flag": null,
+            "meta": {
+              "filename": "TEST_DATA_DIR/import.beancount",
+              "lineno": 10
+            },
+            "price": null,
+            "units": { "currency": "EUR", "number": -100.0 }
+          }
+        ],
+        "tags": []
+      },
       "__source__": "ATXYZ123400000;1;2017-02-14;2017-02-14;2017-02-14-11.57.44.235044;;EUR;-100,00;Bankomat; BANKOMAT  00000483 K2 UM 11:56;4.467,89",
       "filename": "TEST_DATA_DIR/import.csv",
       "lineno": 0
@@ -51,24 +71,15 @@
     "narration": " BANKOMAT  00000483 K2 UM 11:56",
     "payee": "",
     "postings": [
-      {
-        "account": "",
-        "amount": "100.00 EUR"
-      },
-      {
-        "account": "Assets:Checking",
-        "amount": "-100.00 EUR"
-      }
+      { "account": "", "amount": "100.00 EUR" },
+      { "account": "Assets:Checking", "amount": "-100.00 EUR" }
     ],
     "t": "Transaction",
     "tags": []
   },
   {
     "account": "Assets:Checking",
-    "amount": {
-      "currency": "USD",
-      "number": "10"
-    },
+    "amount": { "currency": "USD", "number": "10" },
     "date": "2022-12-12",
     "diff_amount": null,
     "entry_hash": "ENTRY_HASH",

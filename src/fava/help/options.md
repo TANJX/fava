@@ -27,6 +27,7 @@ languages:
 - English (`en`)
 - French (`fr`)
 - German (`de`)
+- Korean (`ko`)
 - Japanese (`ja`)
 - Persian (`fa`)
 - Portuguese (`pt` and `pt_BR`)
@@ -128,15 +129,6 @@ changes is detected. By default only a notification is shown which you can click
 to reload the page. If the file change is due to user interaction, e.g.,
 uploading a document or adding a transaction, Fava will always reload the page
 automatically.
-
-______________________________________________________________________
-
-## `unrealized`
-
-Default: `Unrealized`
-
-The subaccount of the Equity account to post unrealized gains to if the account
-trees are shown at market value.
 
 ______________________________________________________________________
 
@@ -243,7 +235,23 @@ ______________________________________________________________________
 
 Default: Not set
 
-Set the directories to be scanned by the Beancount import mechanism.
+Set a directory to be scanned by the Beancount import mechanism. This option can
+be specified multiple times to add multiple directories.
+
+______________________________________________________________________
+
+## `invert-gains-losses-colors`
+
+Default: `false`
+
+By default, Fava uses green for unrealized gains (positive values) and red for
+unrealized losses (negative values) in the Balance Sheet and Trial Balance when
+displaying at market value.
+
+Set this to `true` to invert the color scheme, using red for gains and green for
+losses. This is useful for users from regions where the opposite convention is
+used, such as Chinese stock markets where red represents gains and green
+represents losses.
 
 ______________________________________________________________________
 

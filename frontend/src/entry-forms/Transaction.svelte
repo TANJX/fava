@@ -1,12 +1,17 @@
 <script lang="ts">
-  import { get } from "../api";
+  import {
+    get_narration_transaction,
+    get_narrations,
+    get_payee_accounts,
+    get_payee_transaction,
+  } from "../api/index.ts";
   import AutocompleteInput from "../AutocompleteInput.svelte";
-  import type { EntryMetadata, Transaction } from "../entries";
-  import { Posting } from "../entries";
-  import { _ } from "../i18n";
-  import { move } from "../lib/array";
-  import { notify_err } from "../notifications";
-  import { payees } from "../stores";
+  import type { EntryMetadata, Transaction } from "../entries/index.ts";
+  import { Posting } from "../entries/index.ts";
+  import { _ } from "../i18n.ts";
+  import { move } from "../lib/array.ts";
+  import { notify_err } from "../notifications.ts";
+  import { payees } from "../stores/index.ts";
   import AddMetadataButton from "./AddMetadataButton.svelte";
   import EntryMetadataSvelte from "./EntryMetadata.svelte";
   import PostingSvelte from "./Posting.svelte";
@@ -23,7 +28,7 @@
     if (payee) {
       suggestions = undefined;
       if ($payees.includes(payee)) {
-        get("payee_accounts", { payee })
+        get_payee_accounts({ payee })
           .then((s) => {
             suggestions = s;
           })
@@ -41,7 +46,7 @@
   let narration = $derived(entry.get_narration_tags_links());
   let narration_suggestions: string[] = $state.raw([]);
   $effect(() => {
-    get("narrations")
+    get_narrations()
       .then((s) => {
         narration_suggestions = s;
       })
@@ -58,7 +63,7 @@
     if (entry.narration || entry.postings.some((p) => !p.is_empty())) {
       return;
     }
-    const payee_transaction = await get("payee_transaction", {
+    const payee_transaction = await get_payee_transaction({
       payee: entry.payee,
     });
     entry = payee_transaction.set("date", entry.date);
@@ -67,11 +72,8 @@
     if (entry.payee || entry.postings.some((p) => !p.is_empty())) {
       return;
     }
-    const data = await get("narration_transaction", {
-      narration: narration,
-    });
-    data.set("date", entry.date);
-    entry = data;
+    const data = await get_narration_transaction({ narration });
+    entry = data.set("date", entry.date); // Copy to "entry" and preserve the date set in the dialog
     narration = entry.get_narration_tags_links();
   }
 
@@ -83,102 +85,103 @@
   });
 </script>
 
-<div>
-  <div class="flex-row">
-    <input
-      type="date"
-      bind:value={
-        () => entry.date,
-        (date: string) => {
-          entry = entry.set("date", date);
-        }
-      }
-      required
-    />
-    <input
-      type="text"
-      name="flag"
-      bind:value={
-        () => entry.flag,
-        (flag: string) => {
-          entry = entry.set("flag", flag);
-        }
-      }
-      required
-    />
-    <label>
-      <span>{_("Payee")}:</span>
-      <AutocompleteInput
-        className="payee"
-        placeholder={_("Payee")}
-        bind:value={
-          () => entry.payee,
-          (payee: string) => {
-            entry = entry.set("payee", payee);
-          }
-        }
-        suggestions={$payees}
-        onSelect={autocompleteSelectPayee}
-      />
-    </label>
-    <label>
-      <span>{_("Narration")}:</span>
-      <AutocompleteInput
-        className="narration"
-        placeholder={_("Narration")}
-        bind:value={narration}
-        suggestions={narration_suggestions}
-        onSelect={autocompleteSelectNarration}
-        onBlur={() => {
-          entry = entry.set_narration_tags_links(narration);
-        }}
-      />
-      <AddMetadataButton
-        bind:meta={
-          () => entry.meta,
-          (meta: EntryMetadata) => {
-            entry = entry.set("meta", meta);
-          }
-        }
-      />
-    </label>
-  </div>
-  <EntryMetadataSvelte
-    bind:meta={
-      () => entry.meta,
-      (meta: EntryMetadata) => {
-        entry = entry.set("meta", meta);
+<div class="flex-row">
+  <input
+    type="date"
+    bind:value={
+      () => entry.date,
+      (date: string) => {
+        entry = entry.set("date", date);
       }
     }
+    required
   />
-  <div class="flex-row">
-    <span class="label"> <span>{_("Postings")}:</span> </span>
-  </div>
-  {#each entry.postings, index (index)}
-    <!-- Using the indexed access (instead of `as posting` in the each) seems to track
-         the reactivity differently and avoids cursor jumping on the posting inputs. -->
-    {@const posting = entry.postings[index]}
-    {#if posting}
-      <PostingSvelte
-        bind:posting={
-          () => posting,
-          (posting: Posting) => {
-            entry = entry.set("postings", entry.postings.with(index, posting));
-          }
+  <input
+    type="text"
+    name="flag"
+    bind:value={
+      () => entry.flag,
+      (flag: string) => {
+        entry = entry.set("flag", flag);
+      }
+    }
+    required
+  />
+  <label>
+    <span class="hide-on-desktop">{_("Payee")}:</span>
+    <AutocompleteInput
+      placeholder={_("Payee")}
+      bind:value={
+        () => entry.payee,
+        (payee: string) => {
+          entry = entry.set("payee", payee);
         }
-        {index}
-        {suggestions}
-        date={entry.date}
-        move={({ from, to }: { from: number; to: number }) => {
-          entry = entry.set("postings", move(entry.postings, from, to));
-        }}
-        remove={() => {
-          entry = entry.set("postings", entry.postings.toSpliced(index, 1));
-        }}
-      />
-    {/if}
-  {/each}
+      }
+      suggestions={$payees}
+      onSelect={autocompleteSelectPayee}
+      --autocomplete-wrapper-flex="1"
+    />
+  </label>
+  <label class="narration">
+    <span class="hide-on-desktop">{_("Narration")}:</span>
+    <AutocompleteInput
+      placeholder={_("Narration")}
+      bind:value={narration}
+      suggestions={narration_suggestions}
+      onSelect={autocompleteSelectNarration}
+      onEnter={() => {
+        entry = entry.set_narration_tags_links(narration);
+      }}
+      onBlur={() => {
+        entry = entry.set_narration_tags_links(narration);
+      }}
+      --autocomplete-wrapper-flex="2"
+    />
+    <AddMetadataButton
+      bind:meta={
+        () => entry.meta,
+        (meta: EntryMetadata) => {
+          entry = entry.set("meta", meta);
+        }
+      }
+    />
+  </label>
 </div>
+<EntryMetadataSvelte
+  bind:meta={
+    () => entry.meta,
+    (meta: EntryMetadata) => {
+      entry = entry.set("meta", meta);
+    }
+  }
+/>
+<div class="flex-row hide-on-desktop">
+  <span class="label">{_("Postings")}:</span>
+</div>
+{#each entry.postings, index (index)}
+  <!-- Using the indexed access (instead of `as posting` in the each) seems to track
+         the reactivity differently and avoids cursor jumping on the posting inputs. -->
+  {@const posting = entry.postings[index]}
+  {#if posting}
+    <PostingSvelte
+      bind:posting={
+        () => posting,
+        (posting: Posting) => {
+          entry = entry.set("postings", entry.postings.with(index, posting));
+        }
+      }
+      {index}
+      {suggestions}
+      date={entry.date}
+      move={({ from, to }: { from: number; to: number }) => {
+        entry = entry.set("postings", move(entry.postings, from, to));
+      }}
+      remove={() => {
+        entry = entry.set("postings", entry.postings.toSpliced(index, 1));
+      }}
+    />
+  {/if}
+{/each}
 
 <style>
   input[name="flag"] {
@@ -188,19 +191,12 @@
     text-align: center;
   }
 
-  div :global(.payee) {
-    flex-grow: 1;
-    flex-basis: 100px;
-  }
-
-  label > span:first-child,
-  .label > span:first-child {
+  .hide-on-desktop {
     display: none;
   }
 
   @media (width <= 767px) {
-    label > span:first-child,
-    .label > span:first-child {
+    .hide-on-desktop {
       display: initial;
       width: 100%;
     }

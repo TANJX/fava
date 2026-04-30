@@ -1,10 +1,14 @@
 <script lang="ts">
   import AutocompleteInput from "../AutocompleteInput.svelte";
-  import { _ } from "../i18n";
-  import { escape_for_regex } from "../journal";
-  import { router, set_query_param } from "../router";
-  import { accounts, links, payees, tags, years } from "../stores";
-  import { account_filter, fql_filter, time_filter } from "../stores/filters";
+  import { _ } from "../i18n.ts";
+  import { escape_for_regex } from "../lib/regex.ts";
+  import { router, set_query_param } from "../router.ts";
+  import {
+    account_filter,
+    fql_filter,
+    time_filter,
+  } from "../stores/filters.ts";
+  import { accounts, links, payees, tags, years } from "../stores/index.ts";
   import { timeFormat } from "d3-time-format";
 
   let fql_filter_suggestions = $derived([
@@ -123,6 +127,7 @@
 </script>
 
 <form
+  class="flex-row"
   onsubmit={(ev) => {
     ev.preventDefault();
     submit();
@@ -154,7 +159,7 @@
   />
   <AutocompleteInput
     bind:value={fql_filter_value}
-    placeholder={_("Filter by tag, payee, ...")}
+    placeholder={_("Filter by tag, payee, …")}
     suggestions={fql_filter_suggestions}
     key="f f"
     clearButton={true}
@@ -171,14 +176,11 @@
 
 <style>
   form {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5em;
-    margin: 0;
     color: var(--text-color);
 
     --placeholder-color: var(--header-placeholder-color);
     --placeholder-background: var(--header-placeholder-background);
+    --input-padding: 8px 25px 8px 10px;
   }
 
   form > :global(span) {
@@ -186,7 +188,6 @@
   }
 
   form :global(input) {
-    padding: 8px 25px 8px 10px;
     outline: none;
     background-color: var(--background);
     border: 0;
@@ -214,8 +215,8 @@
   }
 
   @media print {
-    form :global(input) {
-      padding: 8px 10px;
+    form {
+      --input-padding: 8px 10px;
     }
 
     form :global(input):placeholder-shown {

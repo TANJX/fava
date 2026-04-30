@@ -127,9 +127,9 @@ class FavaBQLShell(BQLShell):
         print(self.noop.__doc__, file=self.outfile)
 
     on_Reload = noop  # noqa: N815
-    do_exit = noop
+    do_exit = noop  # ty:ignore[invalid-method-override]
     do_quit = noop
-    do_EOF = noop  # noqa: N815
+    do_EOF = noop  # noqa: N815  # ty:ignore[invalid-method-override]
 
     def on_Select(self, statement: str) -> Cursor:  # noqa: D102, N802
         return self.context.execute(statement)
@@ -250,4 +250,4 @@ def _serialise(cursor: Cursor) -> QueryResultTable:
         tuple(mapper(row[i]) for i, mapper in enumerate(mappers))
         for row in cursor
     ]
-    return QueryResultTable(dtypes, mapped_rows)
+    return QueryResultTable(dtypes, mapped_rows)  # ty:ignore[invalid-argument-type]

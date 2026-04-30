@@ -99,9 +99,10 @@ class FavaOptions:
     default_page: str = "income_statement/"
     fiscal_year_end: FiscalYearEnd = END_OF_YEAR
     import_config: str | None = None
-    import_dirs: tuple[str, ...] = ()
+    import_dirs: Sequence[str] = field(default_factory=list)
     indent: int = 2
     insert_entry: Sequence[InsertEntryOption] = field(default_factory=list)
+    invert_gains_losses_colors: bool = False
     invert_income_liabilities_equity: bool = False
     language: str | None = None
     locale: str | None = None
@@ -109,7 +110,6 @@ class FavaOptions:
     show_accounts_with_zero_transactions: bool = True
     show_closed_accounts: bool = False
     sidebar_show_queries: int = 5
-    unrealized: str = "Unrealized"
     upcoming_events: int = 7
     uptodate_indicator_grey_lookback_days: int = 60
     use_external_editor: bool = False
@@ -121,7 +121,7 @@ class FavaOptions:
         except re.error as err:
             raise NotARegularExpressionError(value) from err
         # It's typed as Sequence so that it's not externally mutated
-        self.collapse_pattern.append(pattern)  # type: ignore[attr-defined]
+        self.collapse_pattern.append(pattern)  # type: ignore[attr-defined]  # ty:ignore[unresolved-attribute]
 
     def set_default_file(self, value: str, filename: str) -> None:
         """Set the default_file option."""
@@ -138,6 +138,11 @@ class FavaOptions:
             raise InvalidFiscalYearEndOptionError(value)
         self.fiscal_year_end = fye
 
+    def set_import_dirs(self, value: str) -> None:
+        """Add an import directory."""
+        # It's typed as Sequence so that it's not externally mutated
+        self.import_dirs.append(value)  # type: ignore[attr-defined]  # ty:ignore[unresolved-attribute]
+
     def set_insert_entry(
         self, value: str, date: datetime.date, filename: str, lineno: int
     ) -> None:
@@ -148,7 +153,7 @@ class FavaOptions:
             raise NotARegularExpressionError(value) from err
         opt = InsertEntryOption(date, pattern, filename, lineno)
         # It's typed as Sequence so that it's not externally mutated
-        self.insert_entry.append(opt)  # type: ignore[attr-defined]
+        self.insert_entry.append(opt)  # type: ignore[attr-defined]  # ty:ignore[unresolved-attribute]
 
     def set_language(self, value: str) -> None:
         """Set the locale option."""
@@ -180,7 +185,10 @@ TUPLE_OPTS = {f.name for f in _fields if f.type.startswith("tuple[str,")}
 STR_OPTS = {f.name for f in _fields if f.type.startswith("str")}
 
 
-def parse_option_custom_entry(entry: Custom, options: FavaOptions) -> None:
+def parse_option_custom_entry(  # noqa: PLR0912
+    entry: Custom,
+    options: FavaOptions,
+) -> None:
     """Parse a single custom fava-option entry and set option accordingly."""
     key = str(entry.values[0].value).replace("-", "_")
     if key not in All_OPTS:
@@ -197,6 +205,8 @@ def parse_option_custom_entry(entry: Custom, options: FavaOptions) -> None:
         options.set_default_file(value, filename)
     elif key == "fiscal_year_end":
         options.set_fiscal_year_end(value)
+    elif key == "import_dirs":
+        options.set_import_dirs(value)
     elif key == "insert_entry":
         options.set_insert_entry(value, entry.date, filename, lineno)
     elif key == "language":

@@ -6,11 +6,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
+from beangulp.importer import Importer
 
-from fava.beans import BEANCOUNT_V3
 from fava.beans.abc import Note
 from fava.beans.abc import Transaction
-from fava.beans.ingest import BeanImporterProtocol
 from fava.core.ingest import FileImportInfo
 from fava.core.ingest import filepath_in_primary_imports_folder
 from fava.core.ingest import ImportConfigLoadError
@@ -22,8 +21,12 @@ from fava.helpers import FavaAPIError
 from fava.serialisation import serialise
 from fava.util.date import local_today
 
+try:
+    from typing import override
+except ImportError:  # pragma: no cover
+    from typing_extensions import override
+
 if TYPE_CHECKING:  # pragma: no cover
-    from fava.beans.ingest import FileMemo
     from fava.core import FavaLedger
 
     from .conftest import GetFavaLedger
@@ -42,17 +45,21 @@ def test_ingest_file_import_info(
     assert info.account == "Assets:Checking"
 
 
-class MinimalImporter(BeanImporterProtocol):
+class MinimalImporter(Importer):
     def __init__(self, acc: str = "Assets:Checking") -> None:
         self.acc = acc
 
+    @override
+    @property
     def name(self) -> str:
         return f"MinimalImporter({self.acc})"
 
-    def identify(self, file: FileMemo) -> bool:
-        return self.acc in file.name
+    @override
+    def identify(self, filepath: str) -> bool:
+        return self.acc in filepath
 
-    def file_account(self, _file: FileMemo) -> str:
+    @override
+    def account(self, filepath: str) -> str:
         return self.acc
 
 
@@ -70,7 +77,8 @@ def test_ingest_file_import_info_minimal_importer(test_data_dir: Path) -> None:
 
 
 class AccountNameErrors(MinimalImporter):
-    def file_account(self, _file: FileMemo) -> str:
+    @override
+    def account(self, filepath: str) -> str:
         msg = "Some error reason..."
         raise ValueError(msg)
 
@@ -87,7 +95,8 @@ def test_ingest_file_import_info_account_method_errors(
 
 
 class IdentifyErrors(MinimalImporter):
-    def identify(self, _file: FileMemo) -> bool:
+    @override
+    def identify(self, filepath: str) -> bool:
         msg = "IDENTIFY_ERRORS"
         raise ValueError(msg)
 
@@ -102,6 +111,8 @@ def test_ingest_identify_errors(test_data_dir: Path) -> None:
 
 
 class ImporterNameErrors(MinimalImporter):
+    @override
+    @property
     def name(self) -> str:
         msg = "GET_NAME_WILL_ERROR"
         raise ValueError(msg)
@@ -115,8 +126,10 @@ def test_ingest_get_name_errors() -> None:
 
 
 class ImporterNameInvalidType(MinimalImporter):
+    @override
+    @property
     def name(self) -> str:
-        return False  # type: ignore[return-value]
+        return False  # type: ignore[return-value]  # ty:ignore[invalid-return-type]
 
 
 def test_ingest_get_name_invalid_type() -> None:
@@ -137,6 +150,14 @@ def test_load_import_config() -> None:
     with pytest.raises(ImportConfigLoadError, match=r"CONFIG is missing"):
         load_import_config(Path(__file__))
 
+    with pytest.raises(
+        ImportConfigLoadError, match=r"Duplicate importer name found"
+    ):
+        load_import_config(
+            Path(__file__).parent
+            / Path("data/import_config_with_duplicate_names.py")
+        )
+
 
 def test_ingest_no_config(small_example_ledger: FavaLedger) -> None:
     assert small_example_ledger.ingest.import_data() == []
@@ -152,7 +173,9 @@ def test_ingest_examplefile(
     ingest_ledger = get_ledger("import")
 
     files = ingest_ledger.ingest.import_data()
-    assert len(files) > 10  # all files in the test datafolder
+    assert len(files) == len(
+        list(test_data_dir.iterdir())
+    )  # all files in the test datafolder
 
     with pytest.raises(ImporterExtractError):
         entries = ingest_ledger.ingest.extract(
@@ -188,9 +211,6 @@ def test_ingest_examplefile(
     assert entries[1].postings[1].units is not None
     assert entries[1].postings[1].units.number == -50.00
     assert entries[1].postings[1].units.currency == "EUR"
-    if not BEANCOUNT_V3:
-        assert "__duplicate__" not in entries[1].meta
-        assert "__duplicate__" in entries[2].meta
 
     ingest_ledger.ingest.extract(
         str(test_data_dir / "import.csv"),

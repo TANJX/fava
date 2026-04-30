@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import cast
 from typing import overload
 from typing import TYPE_CHECKING
 
@@ -10,8 +11,6 @@ from beancount.core.amount import A as BEANCOUNT_A
 from beancount.core.amount import Amount as BeancountAmount
 from beancount.core.position import Cost as BeancountCost
 from beancount.core.position import Position as BeancountPosition
-
-from fava.beans import BEANCOUNT_V3
 
 if TYPE_CHECKING:  # pragma: no cover
     import datetime
@@ -48,7 +47,7 @@ def amount(amt: Amount | Decimal | str, currency: str | None = None) -> Amount:
     if isinstance(amt, str):
         return BEANCOUNT_A(amt)  # type: ignore[return-value]
     if hasattr(amt, "number") and hasattr(amt, "currency"):
-        return amt
+        return amt  # ty:ignore[invalid-return-type]
     if not isinstance(currency, str):  # pragma: no cover
         raise TypeError
     return BeancountAmount(amt, currency)  # type: ignore[return-value]
@@ -69,9 +68,12 @@ def cost(
 
 def position(units: Amount, cost: Cost | None) -> Position:
     """Create a Position."""
-    return BeancountPosition(  # type: ignore[return-value]
-        units,  # type: ignore[arg-type]
-        cost,  # type: ignore[arg-type]
+    return cast(
+        "Position",
+        BeancountPosition(
+            units,  # type: ignore[arg-type]  # ty:ignore[invalid-argument-type]
+            cost,  # type: ignore[arg-type]  # ty:ignore[invalid-argument-type]
+        ),
     )
 
 
@@ -88,12 +90,12 @@ def posting(
         price = amount(price)
     return data.Posting(  # type: ignore[return-value]
         account,
-        amount(units),  # type: ignore[arg-type]
-        cost,  # type: ignore[arg-type]
-        price,  # type: ignore[arg-type]
+        amount(units),  # type: ignore[arg-type]  # ty:ignore[invalid-argument-type]
+        cost,  # type: ignore[arg-type]  # ty:ignore[invalid-argument-type]
+        price,  # type: ignore[arg-type]  # ty:ignore[invalid-argument-type]
         flag,
         dict(meta) if meta is not None else None,
-    )
+    )  # ty:ignore[invalid-return-type]
 
 
 _EMPTY_SET: frozenset[str] = frozenset()
@@ -110,15 +112,18 @@ def transaction(
     postings: list[Posting] | None = None,
 ) -> Transaction:
     """Create a Beancount Transaction."""
-    return data.Transaction(  # type: ignore[return-value]
-        dict(meta),
-        date,
-        flag,
-        payee,
-        narration,
-        tags if tags is not None else _EMPTY_SET,
-        links if links is not None else _EMPTY_SET,
-        postings if postings is not None else [],  # type: ignore[arg-type]
+    return cast(
+        "Transaction",
+        data.Transaction(
+            dict(meta),
+            date,
+            flag,
+            payee,
+            narration,
+            tags if tags is not None else _EMPTY_SET,
+            links if links is not None else _EMPTY_SET,
+            postings if postings is not None else [],  # type: ignore[arg-type]  # ty:ignore[invalid-argument-type]
+        ),
     )
 
 
@@ -131,13 +136,16 @@ def balance(
     diff_amount: Amount | None = None,
 ) -> Balance:
     """Create a Beancount Balance."""
-    return data.Balance(  # type: ignore[return-value]
-        dict(meta),
-        date,
-        account,
-        _amount(amount),  # type: ignore[arg-type]
-        tolerance,
-        diff_amount,  # type: ignore[arg-type]
+    return cast(
+        "Balance",
+        data.Balance(
+            dict(meta),
+            date,
+            account,
+            _amount(amount),  # type: ignore[arg-type]  # ty:ignore[invalid-argument-type]
+            tolerance,
+            diff_amount,  # type: ignore[arg-type]  # ty:ignore[invalid-argument-type]
+        ),
     )
 
 
@@ -147,10 +155,13 @@ def close(
     account: str,
 ) -> Close:
     """Create a Beancount Open."""
-    return data.Close(  # type: ignore[return-value]
-        dict(meta),
-        date,
-        account,
+    return cast(
+        "Close",
+        data.Close(
+            dict(meta),
+            date,
+            account,
+        ),
     )
 
 
@@ -163,13 +174,16 @@ def document(
     links: frozenset[str] | None = None,
 ) -> Document:
     """Create a Beancount Document."""
-    return data.Document(  # type: ignore[return-value]
-        dict(meta),
-        date,
-        account,
-        filename,
-        tags,
-        links,
+    return cast(
+        "Document",
+        data.Document(
+            dict(meta),
+            date,
+            account,
+            filename,
+            tags,
+            links,
+        ),
     )
 
 
@@ -182,20 +196,16 @@ def note(
     links: frozenset[str] | None = None,
 ) -> Note:
     """Create a Beancount Note."""
-    if not BEANCOUNT_V3:  # pragma: no cover
-        return data.Note(  # type: ignore[call-arg,return-value]
+    return cast(
+        "Note",
+        data.Note(
             dict(meta),
             date,
             account,
             comment,
-        )
-    return data.Note(  # type: ignore[return-value]
-        dict(meta),
-        date,
-        account,
-        comment,
-        tags,
-        links,
+            tags,
+            links,
+        ),
     )
 
 
@@ -207,10 +217,13 @@ def open(  # noqa: A001
     booking: data.Booking | None = None,
 ) -> Open:
     """Create a Beancount Open."""
-    return data.Open(  # type: ignore[return-value]
-        dict(meta),
-        date,
-        account,
-        currencies,
-        booking,
+    return cast(
+        "Open",
+        data.Open(
+            dict(meta),
+            date,
+            account,
+            currencies,
+            booking,
+        ),
     )

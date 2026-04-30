@@ -1,10 +1,10 @@
 <script lang="ts">
-  import type { BeancountError } from "../../api/validators";
-  import { urlForAccount, urlForSource } from "../../helpers";
-  import { _, format } from "../../i18n";
-  import { NumberColumn, Sorter, StringColumn } from "../../sort";
+  import type { BeancountError } from "../../api/validators.ts";
+  import { urlForAccount, urlForSource } from "../../helpers.ts";
+  import { _, format } from "../../i18n.ts";
+  import { NumberColumn, Sorter, StringColumn } from "../../sort/index.ts";
   import SortHeader from "../../sort/SortHeader.svelte";
-  import { accounts, errors } from "../../stores";
+  import { accounts, errors } from "../../stores/index.ts";
 
   let account_re = $derived(new RegExp(`(${$accounts.join("|")})`));
 
@@ -38,7 +38,8 @@
       </tr>
     </thead>
     <tbody>
-      {#each sorted_errors as { message, source } (source ? `${source.filename}-${source.lineno.toString()}-${message}` : message)}
+      <!-- eslint-disable-next-line svelte/require-each-key There could be duplicate errors -->
+      {#each sorted_errors as { message, source }}
         <tr>
           {#if source}
             {@const url = $urlForSource(
@@ -58,7 +59,8 @@
             <td class="num"></td>
           {/if}
           <td class="pre">
-            {#each extract_accounts(message) as [type, text] (text)}
+            <!-- eslint-disable-next-line svelte/require-each-key The same account might occur multiple times -->
+            {#each extract_accounts(message) as [type, text]}
               {#if type === "text"}
                 {text}
               {:else}
